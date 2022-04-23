@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+################################################################################
+
+'''CLI tools for Comp Photo'''
+################################################################################
+
+__version__ = "0.0.0"
+__status__ = "Development"
+
+
+import sys
+import argparse
+import numpy as np
+import skimage
+import requests
+import urllib
+from io import BytesIO
+from matplotlib import pyplot as plt
+from PIL import Image
+
+
+def usr_args():
+    """
+    functional arguments for process
+    https://stackoverflow.com/questions/27529610/call-function-based-on-argparse
+    """
+
+    # initialize parser
+    parser = argparse.ArgumentParser()
+
+    # set usages options
+    parser = argparse.ArgumentParser(
+        prog='vision',
+        usage='%(prog)s [options]')
+
+    # version
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version='%(prog)s ' + __version__)
+
+    # create subparser objects
+    subparsers = parser.add_subparsers()
+
+    # Create parent subparser. Note `add_help=False` & creation via `argparse.`
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument('-i', '--image',
+                               required=True,
+                               help="Local path to image or url")
+
+    parent_parser.add_argument('-o', '--output',
+                                required=True,
+                                help="Name of output image")
+
+
+
+    # Create a functions subcommand
+    parser_listapps = subparsers.add_parser('functions',
+                                            help='List all available functions.')
+    parser_listapps.set_defaults(func=list_apps)
+
+    # Create the bco_license
+    parser_color_blindness = subparsers.add_parser('color_blindness',
+                                           parents=[parent_parser],
+                                           help='Convert RGB of an image to what a colorblind person would see.')
+    parser_color_blindness.set_defaults(func=color_blindness)
+    parser_color_blindness.add_argument('-c', '--color_type',
+                              nargs=1, choices=['protanopia','deuteranopia', 'tritanopia'],
+                              help="Type of color-blindness",required=True)
+
+    # Create a validate subcommand
+    parser_sightedness = subparsers.add_parser('sightedness',
+                                            parents=[parent_parser],
+                                            help="See an image as what a near-sighted/far-sighted person would see")
+    parser_sightedness.set_defaults(func=sightedness)
+    parser_sightedness.add_argument('-s', '--sightedness',
+                              nargs=1, choices =["near", "far"],
+                              help="Near or far sightedness")
+
+
+    parser_tunnel_vision = subparsers.add_parser('tunnel_vision',
+                                            parents=[parent_parser],
+                                            help="See an image as what someone with tunnel vision would see")
+    parser_tunnel_vision.set_defaults(func=tunnel_vision)
+
+
+    parser_stigmatisim = subparsers.add_parser('stigmatisim',
+                                            parents=[parent_parser],
+                                            help="See an image as what someone with a stigmatism would see")
+    parser_stigmatisim.set_defaults(func=stigmatism)
+    parser_stigmatisim.add_argument("-in", "-intensity",
+                                    type=int)
+
+
+    # Print usage message if no args are supplied.
+    if len(sys.argv) <= 1:
+        sys.argv.append('--help')
+
+    # Run the appropriate function
+    options = parser.parse_args()
+    if options.func is list_apps:
+        options.func(parser)
+    else:
+        options.func(options)
+
+
+
+def list_apps(parser: argparse.ArgumentParser):
+    """
+    List all functions and options available in app
+    https://stackoverflow.com/questions/7498595/python-argparse-add-argument-to-multiple-subparsers
+    """
+
+    print('Function List')
+    subparsers_actions = [
+        # pylint: disable=protected-access
+        action for action in parser._actions
+        # pylint: disable=W0212
+        if isinstance(action, argparse._SubParsersAction)]
+    # there will probably only be one subparser_action,
+    # but better safe than sorry
+    for subparsers_action in subparsers_actions:
+        # get all subparsers and print help
+        for choice, subparser in subparsers_action.choices.items():
+            print("Function: '{}'".format(choice))
+            print(subparser.format_help())
+    # print(parser.format_help())
+
+def color_blindness(options: dict):
+    image = load_image(options.image)
+    skimage.io.imshow(image)
+    skimage.io.show()
+
+def tunnel_vision(options: dict):
+    return 0
+
+def sightedness(options: dict):
+    return 0
+
+def stigmatism(options: dict):
+    return 0
+
+def load_image(path: str) -> np.array:
+    try:
+        im = skimage.io.imread(fname= path)
+    except Exception as e: 
+        try: 
+            req = urllib.request.Request(path, headers={'User-Agent': 'Mozilla/5.0'})
+            response = urllib.request.urlopen(req)
+            buf = BytesIO(response.read())
+            im = np.array(Image.open(buf))
+        except Exception as e:
+            im = skimage.io.imread(fname="default.jpg")
+    return im
+
+def main():
+    """
+    Main function
+    """
+
+    usr_args()
+
+
+if __name__ == "__main__":
+    main()
